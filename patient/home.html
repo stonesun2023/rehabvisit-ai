@@ -371,6 +371,13 @@
   <!-- 区域三：训练任务列表 -->
   <div class="task-list" id="taskList"></div>
 
+  <!-- 修改密码入口 -->
+  <div style="text-align:center;padding:16px 20px;">
+    <button id="changePasswordBtn" style="background:none;border:none;color:var(--text-secondary);font-size:13px;text-decoration:underline;cursor:pointer;">
+      修改登录密码
+    </button>
+  </div>
+
   <!-- 区域四：底部导航栏 -->
   <div class="bottom-nav">
     <a href="home.html" class="nav-tab active">
@@ -385,6 +392,22 @@
       <span class="nav-tab-icon">📈</span>
       <span>进展</span>
     </a>
+  </div>
+
+  <!-- 修改密码弹窗 -->
+  <div id="passwordModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-card);border-radius:12px;padding:24px;margin:20px;max-width:320px;width:100%;">
+      <div style="font-size:16px;font-weight:600;color:var(--text-primary);margin-bottom:20px;text-align:center;">修改登录密码</div>
+      <input type="password" id="newPassword" placeholder="请输入新密码，至少6位" 
+        style="width:100%;height:44px;border:1px solid var(--border-color);border-radius:8px;padding:0 12px;font-size:14px;box-sizing:border-box;margin-bottom:12px;background:var(--bg-page);">
+      <input type="password" id="confirmPassword" placeholder="再次输入新密码" 
+        style="width:100%;height:44px;border:1px solid var(--border-color);border-radius:8px;padding:0 12px;font-size:14px;box-sizing:border-box;margin-bottom:12px;background:var(--bg-page);">
+      <div id="passwordError" style="color:var(--danger-color);font-size:12px;margin-bottom:12px;display:none;"></div>
+      <div style="display:flex;gap:12px;">
+        <button id="cancelPasswordBtn" style="flex:1;height:44px;border:1px solid var(--border-color);border-radius:8px;background:var(--bg-card);color:var(--text-primary);font-size:14px;cursor:pointer;">取消</button>
+        <button id="confirmPasswordBtn" style="flex:1;height:44px;border:none;border-radius:8px;background:var(--primary-color);color:#fff;font-size:14px;cursor:pointer;">确认修改</button>
+      </div>
+    </div>
   </div>
 
   <!-- 引入工具函数 -->
@@ -635,6 +658,69 @@
       if (!confirmed) return
       await supabase.auth.signOut()
       window.location.href = '../index.html'
+    })
+
+    // 修改密码功能
+    const passwordModal = document.getElementById('passwordModal')
+    const newPasswordInput = document.getElementById('newPassword')
+    const confirmPasswordInput = document.getElementById('confirmPassword')
+    const passwordError = document.getElementById('passwordError')
+
+    // 打开弹窗
+    document.getElementById('changePasswordBtn').addEventListener('click', () => {
+      passwordModal.style.display = 'flex'
+      newPasswordInput.value = ''
+      confirmPasswordInput.value = ''
+      passwordError.style.display = 'none'
+    })
+
+    // 关闭弹窗
+    document.getElementById('cancelPasswordBtn').addEventListener('click', () => {
+      passwordModal.style.display = 'none'
+    })
+
+    // 点击遮罩关闭
+    passwordModal.addEventListener('click', (e) => {
+      if (e.target === passwordModal) {
+        passwordModal.style.display = 'none'
+      }
+    })
+
+    // 确认修改
+    document.getElementById('confirmPasswordBtn').addEventListener('click', async () => {
+      const newPassword = newPasswordInput.value.trim()
+      const confirmPassword = confirmPasswordInput.value.trim()
+
+      // 验证
+      if (!newPassword || newPassword.length < 6) {
+        passwordError.textContent = '密码长度至少6位'
+        passwordError.style.display = 'block'
+        return
+      }
+
+      if (newPassword !== confirmPassword) {
+        passwordError.textContent = '两次输入的密码不一致'
+        passwordError.style.display = 'block'
+        return
+      }
+
+      // 提交修改
+      try {
+        const { error } = await supabase.auth.updateUser({ password: newPassword })
+        
+        if (error) {
+          passwordError.textContent = '修改失败：' + error.message
+          passwordError.style.display = 'block'
+          return
+        }
+
+        // 成功
+        passwordModal.style.display = 'none'
+        alert('密码已修改，下次登录请使用新密码')
+      } catch (err) {
+        passwordError.textContent = '修改失败，请稍后重试'
+        passwordError.style.display = 'block'
+      }
     })
 
     // 加载任务

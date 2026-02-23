@@ -225,9 +225,23 @@
     </div>
   </div>
 
-  <!-- 区域三：患者列表 -->
+  <!-- 区域三：异常提醒区块 -->
+  <div id="flaggedSection" style="margin:16px 20px;display:none;">
+    <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px;">
+      <div style="font-size:15px;font-weight:600;color:#856404;margin-bottom:12px;">
+        ⚠️ 需关注的对话（<span id="flaggedCount">0</span>）
+      </div>
+      <div id="flaggedList"></div>
+    </div>
+  </div>
+
+  <!-- 区域四：患者列表 -->
   <div class="section-header">
     <div class="section-title">我的患者</div>
+  </div>
+  <div style="margin:0 20px 12px;">
+    <input id="searchInput" type="text" placeholder="搜索患者姓名..."
+      style="width:100%;height:44px;border:1px solid var(--border-color);border-radius:8px;padding:0 12px;font-size:14px;box-sizing:border-box;background:var(--bg-page);">
   </div>
   <div class="patient-list" id="patientList">
     <div class="empty-state">
@@ -318,6 +332,78 @@
       return { percent, lastCheckin }
     }
 
+    // 加载异常对话记录
+    async function loadFlaggedChats(doctorId) {
+      try {
+        // 查询该医生所有患者的 flagged 对话
+        const { data: patients } = await supabase
+          .from('patients')
+          .select('id, name')
+          .eq('doctor_id', doctorId)
+
+        if (!patients || patients.length === 0) return
+
+        const patientIds = patients.map(p => p.id)
+        const patientMap = Object.fromEntries(patients.map(p => [p.id, p.name]))
+
+        const { data: flaggedLogs, error } = await supabase
+          .from('chat_logs')
+          .select('*')
+          .in('patient_id', patientIds)
+          .eq('flagged_for_doctor', true)
+          .order('created_at', { ascending: false })
+          .limit(20)
+
+        if (error) throw error
+
+        if (!flaggedLogs || flaggedLogs.length === 0) return
+
+        // 显示异常区块
+        const section = document.getElementById('flaggedSection')
+        const countEl = document.getElementById('flaggedCount')
+        const listEl = document.getElementById('flaggedList')
+
+        section.style.display = 'block'
+        countEl.textContent = flaggedLogs.length
+
+        // 渲染列表
+        listEl.innerHTML = flaggedLogs.map(log => {
+          const patientName = patientMap[log.patient_id] || '未知患者'
+          const content = log.content.length > 30 ? log.content.slice(0, 30) + '...' : log.content
+          const time = formatTime(log.created_at)
+
+          return `
+            <div style="background:#fff;border-radius:8px;padding:12px;margin-bottom:8px;cursor:pointer;" 
+                 onclick="window.location.href='patient-detail.html?id=${log.patient_id}'">
+              <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                <span style="font-weight:600;color:#856404;">${patientName}</span>
+                <span style="font-size:12px;color:#9CA3AF;">${time}</span>
+              </div>
+              <div style="font-size:13px;color:#6B7280;">${content}</div>
+            </div>
+          `
+        }).join('')
+      } catch (err) {
+        console.error('加载异常对话失败:', err)
+      }
+    }
+
+    // 格式化时间
+    function formatTime(dateStr) {
+      const date = new Date(dateStr)
+      const now = new Date()
+      const diffMs = now - date
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMs / 3600000)
+      const diffDays = Math.floor(diffMs / 86400000)
+
+      if (diffMins < 1) return '刚刚'
+      if (diffMins < 60) return `${diffMins}分钟前`
+      if (diffHours < 24) return `${diffHours}小时前`
+      if (diffDays < 7) return `${diffDays}天前`
+      return date.toLocaleDateString('zh-CN')
+    }
+
     // 验证登录状态并初始化
     async function init() {
       const { data: { session } } = await supabase.auth.getSession()
@@ -325,6 +411,9 @@
         window.location.href = '../index.html'
         return
       }
+
+      // 加载异常对话记录
+      loadFlaggedChats(session.user.id)
 
       // 拉取患者列表
       const { data: patients, error } = await supabase
@@ -413,8 +502,14 @@
       }).join('')
     }
 
+    // 全局患者数据（用于搜索筛选）
+    let allPatientsWithProgress = []
+
     // 渲染患者列表（带完成率）
     function renderPatientsWithProgress(patients) {
+      // 保存到全局变量
+      allPatientsWithProgress = patients
+
       const container = document.getElementById('patientList')
 
       container.innerHTML = patients.map(patient => {
@@ -462,6 +557,34 @@
 
     // 绑定事件
     document.getElementById('avatarBtn').addEventListener('click', logout)
+
+    // 搜索功能
+    const searchInput = document.getElementById('searchInput')
+    searchInput.addEventListener('input', () => {
+      const keyword = searchInput.value.trim()
+      const container = document.getElementById('patientList')
+
+      if (!keyword) {
+        // 清空搜索，恢复显示全部
+        renderPatientsWithProgress(allPatientsWithProgress)
+        return
+      }
+
+      // 本地筛选
+      const filtered = allPatientsWithProgress.filter(p => p.name.includes(keyword))
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-text">没有找到「${keyword}」相关的患者</div>
+          </div>
+        `
+        return
+      }
+
+      renderPatientsWithProgress(filtered)
+    })
 
     // 初始化
     init()

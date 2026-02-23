@@ -338,7 +338,7 @@
       chatContainer.appendChild(messageDiv);
       
       scrollToBottom();
-      return bubble;
+      return messageDiv;  // 返回消息容器，以便追加提示块
     }
 
     // 渲染思考中状态
@@ -389,12 +389,12 @@
       }
     }
 
-    // 渲染异常提示块
-    function renderAlertTip(bubble) {
+    // 渲染异常提示块（追加到消息容器后面）
+    function renderAlertTip(messageDiv) {
       const alertDiv = document.createElement('div')
-      alertDiv.style.cssText = 'background:#FFF3CD;border-radius:8px;padding:10px 12px;margin-top:6px;font-size:13px;color:#856404;'
+      alertDiv.style.cssText = 'background:#FFF3CD;border-radius:8px;padding:10px 12px;margin-top:6px;margin-left:40px;font-size:13px;color:#856404;max-width:75%;'
       alertDiv.textContent = '⚠️ 检测到您描述的情况可能需要关注，建议及时联系您的康复医生确认。'
-      bubble.appendChild(alertDiv)
+      messageDiv.after(alertDiv)
       scrollToBottom()
     }
 
