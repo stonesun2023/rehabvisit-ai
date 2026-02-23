@@ -5,8 +5,224 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>RehabVisit AI · 登录</title>
   <link rel="stylesheet" href="/css/main.css">
+  <style>
+    /* 品牌头部 */
+    .brand-header {
+      padding-top: 48px;
+      padding-bottom: 40px;
+      text-align: center;
+    }
+    .brand-logo {
+      width: 64px;
+      height: 64px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 28px;
+    }
+    .brand-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .brand-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    /* 角色选择 Tab */
+    .role-tabs {
+      display: flex;
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      padding: 4px;
+      margin: 0 20px;
+      box-shadow: var(--shadow-card);
+    }
+    .role-tab {
+      flex: 1;
+      padding: 12px 0;
+      text-align: center;
+      font-size: 15px;
+      font-weight: 500;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+    }
+    .role-tab.active {
+      background: var(--primary-color);
+      color: #fff;
+    }
+
+    /* 登录表单卡片 */
+    .login-card {
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-card);
+      margin: 24px 20px;
+      padding: 24px;
+    }
+    .form-title {
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 24px;
+      color: var(--text-primary);
+    }
+    .input-group {
+      margin-bottom: 16px;
+    }
+    .input-group input {
+      width: 100%;
+      height: 48px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0 16px;
+      font-size: 15px;
+      color: var(--text-primary);
+      background: var(--bg-page);
+      transition: border-color 0.3s ease;
+    }
+    .input-group input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    .input-group input::placeholder {
+      color: var(--text-secondary);
+    }
+    .login-btn {
+      width: 100%;
+      height: 50px;
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-top: 8px;
+    }
+    .login-btn:active {
+      background: #3A7BC8;
+      transform: scale(0.98);
+    }
+    .login-btn.shake {
+      animation: shake 0.6s ease;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); }
+    }
+    .form-hint {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 16px;
+    }
+    .demo-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--warning-color);
+      margin-top: 12px;
+    }
+
+    /* 底部免责声明 */
+    .disclaimer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 20px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-secondary);
+      background: var(--bg-page);
+    }
+  </style>
 </head>
 <body>
   <!-- 登录 -->
+  <!-- 区域一：品牌头部 -->
+  <div class="brand-header">
+    <div class="brand-logo">🏥</div>
+    <div class="brand-title">康复随访 AI</div>
+    <div class="brand-subtitle">专属于你的居家康复伙伴</div>
+  </div>
+
+  <!-- 区域二：角色选择 Tab -->
+  <div class="role-tabs">
+    <button class="role-tab" data-role="doctor">我是医生</button>
+    <button class="role-tab active" data-role="patient">我是家长</button>
+  </div>
+
+  <!-- 区域三：登录表单 -->
+  <div class="login-card">
+    <div class="form-title" id="formTitle">家长登录</div>
+    <div class="input-group">
+      <input type="tel" id="phone" inputmode="numeric" placeholder="请输入手机号">
+    </div>
+    <div class="input-group">
+      <input type="password" id="password" placeholder="请输入密码">
+    </div>
+    <button class="login-btn" id="loginBtn">登录</button>
+    <div class="form-hint">还没有账号？联系你的康复医生获取邀请</div>
+    <div class="demo-hint">演示模式 · 任意内容可登录</div>
+  </div>
+
+  <!-- 底部免责声明 -->
+  <div class="disclaimer">本平台仅供康复辅助参考，不构成医疗诊断</div>
+
+  <script>
+    // Tab 切换逻辑
+    const tabs = document.querySelectorAll('.role-tab');
+    const formTitle = document.getElementById('formTitle');
+    const loginBtn = document.getElementById('loginBtn');
+    const phoneInput = document.getElementById('phone');
+    const passwordInput = document.getElementById('password');
+    
+    let currentRole = 'patient';
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentRole = tab.dataset.role;
+        formTitle.textContent = currentRole === 'doctor' ? '医生登录' : '家长登录';
+      });
+    });
+
+    // 登录按钮逻辑
+    loginBtn.addEventListener('click', () => {
+      const phone = phoneInput.value.trim();
+      const password = passwordInput.value.trim();
+
+      // 输入框为空时抖动
+      if (!phone || !password) {
+        loginBtn.classList.add('shake');
+        setTimeout(() => {
+          loginBtn.classList.remove('shake');
+        }, 600);
+        return;
+      }
+
+      // 根据角色跳转
+      if (currentRole === 'doctor') {
+        window.location.href = 'doctor/dashboard.html';
+      } else {
+        window.location.href = 'patient/home.html';
+      }
+    });
+  </script>
 </body>
 </html>
