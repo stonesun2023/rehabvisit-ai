@@ -212,10 +212,10 @@
   <div class="login-card">
     <div class="form-title" id="formTitle">患者登录</div>
     <div class="input-group">
-      <input type="email" id="email" placeholder="请输入邮箱">
+      <input type="tel" id="email" placeholder="请输入家长手机号" autocomplete="tel">
     </div>
     <div class="input-group">
-      <input type="password" id="password" placeholder="请输入密码">
+      <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password">
     </div>
     <button class="login-btn" id="loginBtn">登录</button>
     <div class="error-message" id="errorMessage"></div>
@@ -269,7 +269,7 @@
 
       // 输入验证
       if (!email || !password) {
-        showError('请输入邮箱和密码');
+        showError('请输入手机号和密码');
         return;
       }
 
@@ -279,14 +279,21 @@
       errorMessage.classList.remove('show');
 
       try {
+        // 患者登录：手机号转换为伪邮箱
+        // 医生登录：直接使用邮箱
+        let loginEmail = email
+        if (currentRole === 'patient') {
+          loginEmail = `${email}@rehab-visit.com`
+        }
+
         const { data, error } = await supabase.auth.signInWithPassword({ 
-          email, 
+          email: loginEmail, 
           password 
         });
 
         if (error) {
           showError(error.message === 'Invalid login credentials' 
-            ? '邮箱或密码错误' 
+            ? '手机号或密码错误' 
             : error.message);
           loginBtn.disabled = false;
           loginBtn.textContent = '登录';

@@ -271,6 +271,21 @@
     const GLM_API_KEY = '27b0c3b4495d41a7abd38c5666e09665.7UmdjwqfPcaHfoZO';
     const GLM_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 
+    // 异常关键词列表（医疗相关，需医生审核）
+    const ALERT_KEYWORDS = [
+      '发烧', '高烧', '38.5', '39度', '40度',
+      '不会动', '动不了', '突然不能', '瘫了',
+      '伤口', '红肿', '化脓', '流脓',
+      '剧烈疼痛', '非常痛', '痛死',
+      '麻木', '没有感觉', '手脚麻',
+      '头晕', '意识', '晕倒', '摔倒'
+    ]
+
+    // 检测文本是否包含异常关键词
+    function checkAlertKeywords(text) {
+      return ALERT_KEYWORDS.some(kw => text.includes(kw))
+    }
+
     // 患者上下文（从 sessionStorage 读取）
     let patientContext = ''
     let currentPatientId = null
@@ -359,19 +374,28 @@
     }
 
     // 保存对话记录到 Supabase
-    async function saveChatLog(role, content) {
+    async function saveChatLog(role, content, flagged = false) {
       if (!currentPatientId) return
       try {
         await supabase.from('chat_logs').insert({
           patient_id: currentPatientId,
           role: role,
           content: content,
-          flagged_for_doctor: false
+          flagged_for_doctor: flagged
         })
       } catch (err) {
         // 静默处理错误，不阻塞用户对话
         console.error('保存对话记录失败:', err)
       }
+    }
+
+    // 渲染异常提示块
+    function renderAlertTip(bubble) {
+      const alertDiv = document.createElement('div')
+      alertDiv.style.cssText = 'background:#FFF3CD;border-radius:8px;padding:10px 12px;margin-top:6px;font-size:13px;color:#856404;'
+      alertDiv.textContent = '⚠️ 检测到您描述的情况可能需要关注，建议及时联系您的康复医生确认。'
+      bubble.appendChild(alertDiv)
+      scrollToBottom()
     }
 
     // 从 Supabase 加载历史对话记录
@@ -457,6 +481,9 @@ ${patientContext}
       sendBtn.disabled = true;
       messageInput.value = '';
 
+      // 检测用户输入是否包含异常关键词
+      const userFlagged = checkAlertKeywords(message)
+
       // 渲染用户消息
       renderMessage(message, true);
       
@@ -464,7 +491,7 @@ ${patientContext}
       conversationHistory.push({ role: 'user', content: message });
 
       // 保存用户消息到 Supabase
-      saveChatLog('user', message)
+      saveChatLog('user', message, userFlagged)
 
       // 显示思考中
       renderThinking();
@@ -476,14 +503,23 @@ ${patientContext}
         // 移除思考中
         removeThinking();
         
-        // 渲染 AI 回复
-        renderMessage(response, false);
+        // 检测 AI 回复是否包含异常关键词
+        const aiFlagged = checkAlertKeywords(response)
+        const flagged = userFlagged || aiFlagged
+
+        // 渲染 AI 回复（返回 bubble 元素以便追加提示）
+        const bubble = renderMessage(response, false);
+        
+        // 如果命中关键词，显示提示块
+        if (flagged) {
+          renderAlertTip(bubble)
+        }
         
         // 添加到对话历史
         conversationHistory.push({ role: 'assistant', content: response });
 
-        // 保存 AI 回复到 Supabase
-        saveChatLog('assistant', response)
+        // 保存 AI 回复到 Supabase（带 flagged 标记）
+        saveChatLog('assistant', response, flagged)
       } catch (error) {
         removeThinking();
         renderMessage('抱歉，网络出了点问题，请稍后再试。', false);

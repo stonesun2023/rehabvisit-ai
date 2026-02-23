@@ -166,11 +166,26 @@
     </div>
     
     <div class="form-group">
-      <label class="form-label">联系方式</label>
-      <input type="tel" class="form-input" id="contact" placeholder="请输入家长手机号（选填）">
+      <label class="form-label">家长手机号<span class="required">*</span></label>
+      <input type="tel" class="form-input" id="contact" placeholder="请输入11位手机号" autocomplete="tel">
     </div>
     
     <button class="submit-btn" id="submitBtn">保存患者</button>
+  </div>
+
+  <!-- 成功提示卡片 -->
+  <div class="form-card" id="successCard" style="display:none;margin-top:-12px;">
+    <div style="text-align:center;padding:16px 0;">
+      <div style="font-size:48px;margin-bottom:12px;">✅</div>
+      <div style="font-size:17px;font-weight:600;color:var(--success-color);margin-bottom:16px;">患者账号已创建</div>
+      <div style="background:var(--bg-page);border-radius:8px;padding:16px;text-align:left;font-size:14px;line-height:1.8;">
+        <div><strong>登录地址：</strong><br>https://stonesun2023.github.io/rehabvisit-ai/</div>
+        <div style="margin-top:8px;"><strong>手机号：</strong><span id="displayPhone"></span></div>
+        <div style="margin-top:8px;"><strong>初始密码：</strong><span id="displayPassword"></span></div>
+      </div>
+      <div style="margin-top:16px;font-size:13px;color:var(--text-secondary);">请将以上信息告知家长，建议家长首次登录后修改密码。</div>
+      <button class="submit-btn" style="margin-top:20px;" onclick="window.location.href='./dashboard.html'">返回看板</button>
+    </div>
   </div>
 
   <script type="module">
@@ -178,6 +193,8 @@
 
     const submitBtn = document.getElementById('submitBtn')
     const errorMessage = document.getElementById('errorMessage')
+    const formCard = document.querySelector('.form-card')
+    const successCard = document.getElementById('successCard')
 
     // 显示错误信息
     function showError(message) {
@@ -220,29 +237,78 @@
         showError('请输入诊断信息')
         return
       }
-
-      // 禁用按钮
-      submitBtn.disabled = true
-      submitBtn.textContent = '保存中...'
-
-      // 保存到 Supabase
-      const { error } = await supabase.from('patients').insert({
-        doctor_id: session.user.id,
-        name,
-        age: parseInt(age),
-        diagnosis,
-        contact
-      })
-
-      if (error) {
-        showError('保存失败：' + error.message)
-        submitBtn.disabled = false
-        submitBtn.textContent = '保存患者'
+      if (!contact) {
+        showError('请输入家长手机号')
         return
       }
 
-      // 保存成功，跳回看板
-      window.location.href = './dashboard.html'
+      // 禁用按钮
+      submitBtn.disabled = true
+      submitBtn.textContent = '创建账号中...'
+
+      try {
+        // 生成伪邮箱：手机号@rehab-visit.com
+        const patientEmail = `${contact}@rehab-visit.com`
+
+        // 生成初始密码：Rehab + 手机号后4位 + !
+        let last4Digits = '1234'
+        if (contact && /\d{4,}/.test(contact)) {
+          const digits = contact.replace(/\D/g, '')
+          last4Digits = digits.slice(-4)
+        }
+        const initialPassword = `Rehab${last4Digits}!`
+
+        // 创建 Auth 账号
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: patientEmail,
+          password: initialPassword,
+          options: {
+            data: {
+              role: 'patient',
+              name: name
+            }
+          }
+        })
+
+        if (authError) {
+          if (authError.message.includes('already registered') || authError.message.includes('already been registered')) {
+            showError('该手机号已有账号，请换一个')
+          } else {
+            showError('创建账号失败：' + authError.message)
+          }
+          submitBtn.disabled = false
+          submitBtn.textContent = '保存患者'
+          return
+        }
+
+        // 保存患者信息到 patients 表
+        const { error: patientError } = await supabase.from('patients').insert({
+          doctor_id: session.user.id,
+          user_id: authData.user.id,
+          name,
+          age: parseInt(age),
+          diagnosis,
+          contact
+        })
+
+        if (patientError) {
+          showError('保存患者信息失败：' + patientError.message)
+          submitBtn.disabled = false
+          submitBtn.textContent = '保存患者'
+          return
+        }
+
+        // 显示成功提示
+        document.getElementById('displayPhone').textContent = contact
+        document.getElementById('displayPassword').textContent = initialPassword
+        formCard.style.display = 'none'
+        successCard.style.display = 'block'
+
+      } catch (err) {
+        showError('操作失败：' + err.message)
+        submitBtn.disabled = false
+        submitBtn.textContent = '保存患者'
+      }
     }
 
     // 绑定事件
