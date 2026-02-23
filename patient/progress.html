@@ -5,8 +5,640 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>RehabVisit AI · 进展记录</title>
   <link rel="stylesheet" href="../css/main.css">
+  <style>
+    :root {
+      --primary-color: #4A90D9;
+      --primary-light: #EBF4FF;
+      --success-color: #52C41A;
+      --warning-color: #FAAD14;
+      --danger-color: #FF4D4F;
+      --text-primary: #2C3E50;
+      --text-secondary: #7F8C8D;
+      --bg-page: #F5F7FA;
+      --bg-card: #FFFFFF;
+      --border-color: #E8ECF0;
+      --border-radius: 12px;
+      --shadow-card: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    body {
+      padding-bottom: 70px;
+    }
+
+    /* 顶部标题栏 */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .nav-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* 通用卡片样式 */
+    .section-card {
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-card);
+      margin: 16px 20px;
+      padding: 16px;
+    }
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    /* 模块1：打卡日历 */
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .calendar-month {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .calendar-legend {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .legend-dot.done {
+      background: var(--success-color);
+    }
+    .legend-dot.todo {
+      border: 1px solid var(--border-color);
+    }
+    .calendar-weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+    .weekday {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-secondary);
+      padding: 4px 0;
+    }
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .calendar-day {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      color: var(--text-primary);
+      position: relative;
+    }
+    .calendar-day.other-month {
+      color: var(--text-secondary);
+      opacity: 0.4;
+    }
+    .calendar-day.today {
+      font-weight: 600;
+    }
+    .calendar-day .dot {
+      position: absolute;
+      bottom: 2px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .calendar-day .dot.done {
+      background: var(--success-color);
+    }
+    .calendar-day .dot.partial {
+      background: var(--warning-color);
+    }
+
+    /* 模块2：近7天完成率 */
+    .chart-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      height: 120px;
+      padding: 0 8px;
+    }
+    .chart-bar-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+    .chart-bar {
+      width: 24px;
+      background: var(--primary-light);
+      border-radius: 4px 4px 0 0;
+      transition: height 0.3s ease;
+      position: relative;
+    }
+    .chart-bar.has-data {
+      background: var(--primary-color);
+    }
+    .chart-percent {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .chart-label {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 6px;
+    }
+    .chart-label.today {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+
+    /* 模块3：AI总结 */
+    .summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .refresh-btn {
+      padding: 6px 12px;
+      font-size: 13px;
+      color: var(--primary-color);
+      background: var(--primary-light);
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .refresh-btn:active {
+      transform: scale(0.95);
+    }
+    .refresh-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .summary-content {
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .summary-loading {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .summary-empty {
+      color: var(--text-secondary);
+      font-size: 14px;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* 模块4：历史记录列表 */
+    .history-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .history-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .history-item:last-child {
+      border-bottom: none;
+    }
+    .history-date {
+      width: 70px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+    .history-content {
+      flex: 1;
+    }
+    .history-task {
+      font-size: 14px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    .history-note {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+    .history-empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* 底部导航栏 */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 20px;
+    }
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      text-decoration: none;
+      font-size: 12px;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+    .nav-tab.active {
+      color: var(--primary-color);
+    }
+    .nav-tab-icon {
+      font-size: 20px;
+    }
+  </style>
 </head>
 <body>
   <!-- 进展记录 -->
+  <!-- 顶部标题栏 -->
+  <div class="top-nav">
+    <div class="nav-title">训练进展</div>
+  </div>
+
+  <!-- 模块1：本月打卡日历 -->
+  <div class="section-card">
+    <div class="calendar-header">
+      <div class="calendar-month" id="calendarMonth"></div>
+      <div class="calendar-legend">
+        <div class="legend-item">
+          <div class="legend-dot done"></div>
+          <span>已打卡</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot todo"></div>
+          <span>未打卡</span>
+        </div>
+      </div>
+    </div>
+    <div class="calendar-weekdays">
+      <div class="weekday">日</div>
+      <div class="weekday">一</div>
+      <div class="weekday">二</div>
+      <div class="weekday">三</div>
+      <div class="weekday">四</div>
+      <div class="weekday">五</div>
+      <div class="weekday">六</div>
+    </div>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
+
+  <!-- 模块2：近7天完成率 -->
+  <div class="section-card">
+    <div class="section-title">近7天完成率</div>
+    <div class="chart-container" id="chartContainer"></div>
+  </div>
+
+  <!-- 模块3：本周AI总结 -->
+  <div class="section-card">
+    <div class="summary-header">
+      <div class="section-title">本周训练总结</div>
+      <button class="refresh-btn" id="refreshBtn" onclick="generateSummary()">刷新</button>
+    </div>
+    <div class="summary-content" id="summaryContent">
+      <div class="summary-empty">点击「刷新」生成本周总结</div>
+    </div>
+  </div>
+
+  <!-- 模块4：历史记录列表 -->
+  <div class="section-card">
+    <div class="section-title">历史记录</div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+  <!-- 底部导航栏 -->
+  <div class="bottom-nav">
+    <a href="home.html" class="nav-tab">
+      <span class="nav-tab-icon">🏠</span>
+      <span>训练</span>
+    </a>
+    <a href="chat.html" class="nav-tab">
+      <span class="nav-tab-icon">💬</span>
+      <span>问问AI</span>
+    </a>
+    <a href="progress.html" class="nav-tab active">
+      <span class="nav-tab-icon">📈</span>
+      <span>进展</span>
+    </a>
+  </div>
+
+  <!-- 引入工具函数 -->
+  <script src="../js/utils.js"></script>
+  <script>
+    // 任务总数（由 module script 从 Supabase 动态读取）
+    let TOTAL_TASKS = 1;  // 默认为 1，避免除零错误
+
+    // GLM API 配置
+    const GLM_API_KEY = '27b0c3b4495d41a7abd38c5666e09665.7UmdjwqfPcaHfoZO';
+    const GLM_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+
+    // 获取所有打卡记录（从 window.DB_LOGS 读取，由 module script 加载）
+    function getAllLogs() {
+      return window.DB_LOGS || [];
+    }
+
+    // 渲染函数包装器（供 module script 调用）
+    function renderCalendarWithLogs(logs) { window.DB_LOGS = logs; renderCalendar(); }
+    function renderChartWithLogs(logs) { window.DB_LOGS = logs; renderChart(); }
+    function renderHistoryWithLogs(logs) { window.DB_LOGS = logs; renderHistory(); }
+
+    // 获取已打卡日期集合（日期 -> 打卡任务数）
+    function getCompletedDates() {
+      const logs = getAllLogs();
+      const dateMap = {};
+      logs.forEach(log => {
+        const date = log.completed_at.slice(0, 10);
+        dateMap[date] = (dateMap[date] || 0) + 1;
+      });
+      return dateMap;
+    }
+
+    // 获取本周打卡记录（用日期范围比较，更可靠）
+    function getCurrentWeekLogs(logs) {
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0=周日
+      const monday = new Date(now);
+      monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+      monday.setHours(0, 0, 0, 0);
+      
+      return logs.filter(l => new Date(l.completed_at) >= monday);
+    }
+
+    // 获取近7天日期数组
+    function getLast7Days() {
+      return Array.from({length: 7}, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (6 - i));
+        return d.toISOString().slice(0, 10);
+      });
+    }
+
+    // 模块1：渲染日历
+    function renderCalendar() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      
+      // 显示月份
+      document.getElementById('calendarMonth').textContent = `${year}年${month + 1}月`;
+      
+      // 获取当月第一天和最后一天
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const daysInMonth = lastDay.getDate();
+      const startWeekday = firstDay.getDay();
+      
+      // 获取打卡数据
+      const dateMap = getCompletedDates();
+      const today = now.toISOString().slice(0, 10);
+      
+      // 生成日历格子
+      const grid = document.getElementById('calendarGrid');
+      let html = '';
+      
+      // 上月空白
+      for (let i = 0; i < startWeekday; i++) {
+        html += '<div class="calendar-day other-month"></div>';
+      }
+      
+      // 当月日期
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const taskCount = dateMap[dateStr] || 0;
+        const isToday = dateStr === today;
+        
+        let dotHtml = '';
+        if (taskCount > 0) {
+          const dotClass = taskCount >= TOTAL_TASKS ? 'done' : 'partial';
+          dotHtml = `<div class="dot ${dotClass}"></div>`;
+        }
+        
+        html += `
+          <div class="calendar-day ${isToday ? 'today' : ''}">
+            ${day}
+            ${dotHtml}
+          </div>
+        `;
+      }
+      
+      grid.innerHTML = html;
+    }
+
+    // 模块2：渲染完成率图表
+    function renderChart() {
+      const container = document.getElementById('chartContainer');
+      const dateMap = getCompletedDates();
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+      const last7Days = getLast7Days();
+      const todayStr = new Date().toISOString().slice(0, 10);
+      
+      let html = '';
+      
+      last7Days.forEach((dateStr, index) => {
+        const taskCount = dateMap[dateStr] || 0;
+        const percent = Math.round((taskCount / TOTAL_TASKS) * 100);
+        const isToday = dateStr === todayStr;
+        const date = new Date(dateStr);
+        
+        html += `
+          <div class="chart-bar-wrapper">
+            <div class="chart-percent">${percent}%</div>
+            <div class="chart-bar ${taskCount > 0 ? 'has-data' : ''}" style="height: ${Math.max(percent, 4)}%"></div>
+            <div class="chart-label ${isToday ? 'today' : ''}">周${weekdays[date.getDay()]}</div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+
+    // 模块3：生成AI总结
+    async function generateSummary() {
+      const btn = document.getElementById('refreshBtn');
+      const content = document.getElementById('summaryContent');
+      
+      btn.disabled = true;
+      content.innerHTML = '<div class="summary-loading">正在生成...</div>';
+      
+      try {
+        const logs = getAllLogs();
+        const weekLogs = getCurrentWeekLogs(logs);
+        
+        if (weekLogs.length === 0) {
+          content.innerHTML = '<div class="summary-empty">本周还没有打卡记录</div>';
+          btn.disabled = false;
+          return;
+        }
+        
+        const difficultyText = ['', '轻松', '正常', '有点吃力'];
+        const summary = weekLogs.map(l =>
+          `${l.completed_at.slice(0, 10)} 完成「${l.task_name}」，困难度：${difficultyText[l.difficulty]}，备注：${l.note || '无'}`
+        ).join('\n');
+        
+        const prompt = `以下是一位儿童康复患者本周的训练打卡记录：
+${summary}
+
+请用温和、鼓励的语气，给家长写一段100字以内的本周训练总结，指出坚持得好的地方，以及需要注意的地方。不要做医疗诊断，不要建议更改训练方案。`;
+
+        const response = await fetch(GLM_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${GLM_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'glm-4-flash',
+            messages: [
+              { role: 'system', content: '你是一个专业的康复医学科AI助手，专门为患者家长提供支持。你的回复要温和、鼓励，不做医疗诊断。' },
+              { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 300
+          })
+        });
+
+        if (!response.ok) throw new Error(`API错误: ${response.status}`);
+        const data = await response.json();
+        const result = data.choices[0].message.content;
+        
+        content.innerHTML = result;
+      } catch (error) {
+        content.innerHTML = '<div class="summary-empty">生成失败，请稍后重试</div>';
+        console.error('API Error:', error);
+      }
+      
+      btn.disabled = false;
+    }
+
+    // 模块4：渲染历史记录
+    function renderHistory() {
+      const container = document.getElementById('historyList');
+      const logs = getAllLogs();
+      
+      // 按时间倒序，取最近20条
+      const recentLogs = logs.sort((a, b) => 
+        new Date(b.completed_at) - new Date(a.completed_at)
+      ).slice(0, 20);
+      
+      if (recentLogs.length === 0) {
+        container.innerHTML = '<div class="history-empty">还没有打卡记录，去完成今天的训练吧 💪</div>';
+        return;
+      }
+      
+      const difficultyEmoji = { 1: '😊', 2: '😐', 3: '😓' };
+      
+      let html = '';
+      recentLogs.forEach(log => {
+        const date = log.completed_at.slice(0, 10);
+        const time = log.completed_at.slice(11, 16);
+        html += `
+          <div class="history-item">
+            <div class="history-date">${date}<br>${time}</div>
+            <div class="history-content">
+              <div class="history-task">${log.task_name} ${difficultyEmoji[log.difficulty]}</div>
+              ${log.note ? `<div class="history-note">${log.note}</div>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+
+    // 初始化由 module script 触发
+  </script>
+
+  <script type="module">
+    import { supabase } from '../js/supabase-client.js'
+    import { ensurePatientSession } from '../js/auth.js'
+
+    async function loadAndRender() {
+      // 使用 ensurePatientSession 获取患者信息（自动恢复 sessionStorage）
+      const patient = await ensurePatientSession()
+      if (!patient) return  // 已跳转，终止后续逻辑
+
+      // 拉取任务总数（用于计算完成率）
+      try {
+        const { data: tasks, error: taskError } = await supabase
+          .from('daily_tasks')
+          .select('id')
+          .eq('patient_id', patient.id)
+        
+        if (!taskError && tasks && tasks.length > 0) {
+          TOTAL_TASKS = tasks.length
+        } else {
+          TOTAL_TASKS = 1  // 回退为 1，避免除零错误
+        }
+      } catch (err) {
+        TOTAL_TASKS = 1  // 查询出错也回退为 1
+      }
+
+      // 拉取最近30天打卡记录
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      const { data: logs } = await supabase
+        .from('task_logs')
+        .select('*, daily_tasks(task_name)')
+        .eq('patient_id', patient.id)
+        .gte('completed_at', thirtyDaysAgo.toISOString())
+        .order('completed_at', { ascending: false })
+
+      // 格式化数据，兼容原有渲染函数的字段
+      const formatted = (logs || []).map(l => ({
+        ...l,
+        task_name: l.daily_tasks?.task_name || '训练任务',
+        difficulty: l.difficulty_level,
+        completed_at: l.completed_at
+      }))
+
+      // 把数据挂到 window，让普通 script 的函数能访问
+      window.DB_LOGS = formatted
+      renderCalendarWithLogs(formatted)
+      renderChartWithLogs(formatted)
+      renderHistoryWithLogs(formatted)
+    }
+
+    loadAndRender()
+  </script>
 </body>
 </html>

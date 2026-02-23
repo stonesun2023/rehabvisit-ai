@@ -5,8 +5,777 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>RehabVisit AI · 患者详情</title>
   <link rel="stylesheet" href="../css/main.css">
+  <style>
+    :root {
+      --primary-color: #4A90D9;
+      --primary-light: #EBF4FF;
+      --success-color: #52C41A;
+      --warning-color: #FAAD14;
+      --danger-color: #FF4D4F;
+      --text-primary: #2C3E50;
+      --text-secondary: #7F8C8D;
+      --bg-page: #F5F7FA;
+      --bg-card: #FFFFFF;
+      --border-color: #E8ECF0;
+      --border-radius: 12px;
+      --shadow-card: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    body {
+      padding-bottom: 20px;
+    }
+
+    /* 区域一：顶部导航栏 */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--text-primary);
+      text-decoration: none;
+      margin-right: 8px;
+    }
+    .nav-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* 区域二：基本信息卡片 */
+    .info-card {
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-card);
+      margin: 16px 20px;
+      padding: 16px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+    .info-value {
+      font-size: 14px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* 区域三：Tab 切换 */
+    .tab-container {
+      margin: 0 20px;
+    }
+    .tab-header {
+      display: flex;
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      padding: 4px;
+      box-shadow: var(--shadow-card);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 0;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none;
+    }
+    .tab-btn.active {
+      background: var(--primary-color);
+      color: #fff;
+    }
+    .tab-content {
+      display: none;
+      margin-top: 16px;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* 区域四：训练计划 */
+    .plan-section {
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-card);
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .plan-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+    .plan-textarea {
+      width: 100%;
+      min-height: 150px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--bg-page);
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .plan-textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    .plan-display {
+      width: 100%;
+      min-height: 120px;
+      background: var(--bg-page);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 14px;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      line-height: 1.6;
+    }
+    .plan-display.empty {
+      color: var(--text-secondary);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .btn {
+      flex: 1;
+      height: 44px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: none;
+    }
+    .btn-primary {
+      background: var(--primary-color);
+      color: #fff;
+    }
+    .btn-primary:disabled {
+      background: var(--border-color);
+      cursor: not-allowed;
+    }
+    .btn-success {
+      background: var(--success-color);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: var(--bg-page);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    .error-message {
+      font-size: 13px;
+      color: var(--danger-color);
+      margin-top: 8px;
+      display: none;
+    }
+    .error-message.show {
+      display: block;
+    }
+    .success-message {
+      font-size: 13px;
+      color: var(--success-color);
+      margin-top: 8px;
+      display: none;
+    }
+    .success-message.show {
+      display: block;
+    }
+
+    /* 占位内容 */
+    .placeholder {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+    .placeholder-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    /* 任务管理 */
+    .task-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg-page);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .task-item-info { flex: 1; }
+    .task-item-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .task-item-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+    .task-item-freq { font-size: 12px; color: var(--primary-color); margin-top: 2px; }
+    .task-delete-btn {
+      width: 28px; height: 28px;
+      border: none; background: none;
+      color: var(--danger-color);
+      font-size: 18px; cursor: pointer;
+      flex-shrink: 0;
+    }
+  </style>
 </head>
 <body>
-  <!-- 患者详情 -->
+  <!-- 区域一：顶部导航栏 -->
+  <div class="top-nav">
+    <a href="dashboard.html" class="back-btn">←</a>
+    <div class="nav-title" id="patientName">加载中...</div>
+  </div>
+
+  <!-- 区域二：基本信息卡片 -->
+  <div class="info-card" id="infoCard">
+    <div class="info-row">
+      <span class="info-label">姓名</span>
+      <span class="info-value" id="infoName">-</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">年龄</span>
+      <span class="info-value" id="infoAge">-</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">诊断</span>
+      <span class="info-value" id="infoDiagnosis">-</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">联系方式</span>
+      <span class="info-value" id="infoContact">-</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">建档时间</span>
+      <span class="info-value" id="infoCreatedAt">-</span>
+    </div>
+  </div>
+
+  <!-- 区域三：Tab 切换 -->
+  <div class="tab-container">
+    <div class="tab-header">
+      <button class="tab-btn active" data-tab="plan">训练计划</button>
+      <button class="tab-btn" data-tab="logs">打卡记录</button>
+    </div>
+
+    <!-- Tab 1：训练计划 -->
+    <div class="tab-content active" id="tabPlan">
+      <!-- 医生专业版 -->
+      <div class="plan-section">
+        <div class="plan-title">📝 医生专业版</div>
+        <textarea class="plan-textarea" id="professionalContent" placeholder="请输入专业康复训练计划..."></textarea>
+        <div class="error-message" id="professionalError"></div>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="saveProfessionalBtn">保存计划</button>
+        </div>
+      </div>
+
+      <!-- 家长通俗版 -->
+      <div class="plan-section">
+        <div class="plan-title">👨‍👩‍👧 家长通俗版</div>
+        <div class="plan-display empty" id="familyDisplay">点击下方按钮，AI 将自动生成家长版</div>
+        <div class="error-message" id="familyError"></div>
+        <div class="success-message" id="familySuccess"></div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="generateFamilyBtn">✨ AI 一键生成家长版</button>
+          <button class="btn btn-success" id="confirmFamilyBtn" style="display:none">✅ 确认并保存</button>
+        </div>
+      </div>
+
+      <!-- 每日任务管理 -->
+      <div class="plan-section" id="taskSection">
+        <div class="plan-title">📋 每日训练任务</div>
+
+        <!-- 任务列表 -->
+        <div id="taskList"></div>
+
+        <!-- 手动添加表单 -->
+        <div id="addTaskForm" style="margin-top:12px;">
+          <input type="text" id="taskName" placeholder="任务名称（如：腿部拉伸）" 
+            style="width:100%;height:44px;border:1px solid var(--border-color);border-radius:8px;padding:0 12px;font-size:14px;box-sizing:border-box;margin-bottom:8px;background:var(--bg-page);">
+          <input type="text" id="taskDesc" placeholder="描述（如：双侧腓肠肌牵伸，保持30秒）"
+            style="width:100%;height:44px;border:1px solid var(--border-color);border-radius:8px;padding:0 12px;font-size:14px;box-sizing:border-box;margin-bottom:8px;background:var(--bg-page);">
+          <input type="text" id="taskFreq" placeholder="频次（如：每天2次）"
+            style="width:100%;height:44px;border:1px solid var(--border-color);border-radius:8px;padding:0 12px;font-size:14px;box-sizing:border-box;margin-bottom:12px;background:var(--bg-page);">
+          <div class="btn-group">
+            <button class="btn btn-secondary" id="addTaskBtn">＋ 手动添加任务</button>
+            <button class="btn btn-primary" id="aiSplitBtn">🤖 AI 拆解任务</button>
+          </div>
+        </div>
+        <div class="error-message" id="taskError"></div>
+        <div class="success-message" id="taskSuccess"></div>
+      </div>
+    </div>
+
+    <!-- Tab 2：打卡记录 -->
+    <div class="tab-content" id="tabLogs">
+      <div class="plan-section">
+        <div class="plan-title">📊 历史打卡记录</div>
+        <div id="logsList">
+          <div style="color:var(--text-secondary);font-size:13px;text-align:center;padding:16px 0;">点击「打卡记录」Tab 加载数据...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { supabase } from '../js/supabase-client.js'
+    import { callGLM } from '../js/ai.js'
+
+    // 从 URL 获取患者 id
+    const patientId = new URLSearchParams(window.location.search).get('id')
+    
+    // 当前计划 ID（用于更新）
+    let currentPlanId = null
+    let generatedFamilyContent = null
+
+    // 初始化
+    async function init() {
+      if (!patientId) {
+        window.location.href = './dashboard.html'
+        return
+      }
+
+      // 验证登录
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = '../index.html'
+        return
+      }
+
+      // 拉取患者信息
+      const { data: patient, error: patientError } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('id', patientId)
+        .single()
+
+      if (patientError || !patient) {
+        alert('患者不存在')
+        window.location.href = './dashboard.html'
+        return
+      }
+
+      renderPatientInfo(patient)
+
+      // 拉取已有计划
+      const { data: plan } = await supabase
+        .from('rehab_plans')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (plan) {
+        currentPlanId = plan.id
+        document.getElementById('professionalContent').value = plan.professional_content || ''
+        if (plan.family_content) {
+          document.getElementById('familyDisplay').textContent = plan.family_content
+          document.getElementById('familyDisplay').classList.remove('empty')
+          generatedFamilyContent = plan.family_content
+        }
+      }
+    }
+
+    // 渲染患者信息
+    function renderPatientInfo(patient) {
+      document.getElementById('patientName').textContent = patient.name
+      document.getElementById('infoName').textContent = patient.name
+      document.getElementById('infoAge').textContent = patient.age ? `${patient.age}岁` : '-'
+      document.getElementById('infoDiagnosis').textContent = patient.diagnosis || '-'
+      document.getElementById('infoContact').textContent = patient.contact || '-'
+      document.getElementById('infoCreatedAt').textContent = formatDate(patient.created_at)
+    }
+
+    // 格式化日期
+    function formatDate(dateStr) {
+      if (!dateStr) return '-'
+      const d = new Date(dateStr)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+
+    // Tab 切换
+    let logsLoaded = false  // 标记打卡记录是否已加载
+    
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'))
+        btn.classList.add('active')
+        document.getElementById('tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)).classList.add('active')
+        
+        // 切换到打卡记录 Tab 时加载数据
+        if (btn.dataset.tab === 'logs' && !logsLoaded) {
+          loadCheckinLogs()
+        }
+      })
+    })
+
+    // 加载打卡记录
+    async function loadCheckinLogs() {
+      const container = document.getElementById('logsList')
+      container.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;text-align:center;padding:16px 0;">加载中...</div>'
+
+      try {
+        const { data: logs, error } = await supabase
+          .from('task_logs')
+          .select('*, daily_tasks(task_name)')
+          .eq('patient_id', patientId)
+          .order('completed_at', { ascending: false })
+          .limit(100)
+
+        if (error) throw error
+
+        logsLoaded = true
+
+        if (!logs || logs.length === 0) {
+          container.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;text-align:center;padding:16px 0;">暂无打卡记录</div>'
+          return
+        }
+
+        const difficultyEmoji = { 1: '😊 轻松', 2: '😐 正常', 3: '😓 吃力' }
+
+        container.innerHTML = logs.map(log => {
+          const date = log.completed_at.slice(0, 10)
+          const time = log.completed_at.slice(11, 16)
+          const taskName = log.daily_tasks?.task_name || '未知任务'
+          const difficulty = difficultyEmoji[log.difficulty_level] || '未评分'
+          const note = log.note || ''
+
+          return `
+            <div class="task-item" style="flex-direction:column;align-items:flex-start;">
+              <div style="display:flex;justify-content:space-between;width:100%;margin-bottom:4px;">
+                <span class="task-item-name">${taskName}</span>
+                <span style="font-size:12px;color:var(--text-secondary);">${date} ${time}</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-secondary);">
+                难度：${difficulty}
+                ${note ? ` · 备注：${note}` : ''}
+              </div>
+            </div>
+          `
+        }).join('')
+      } catch (err) {
+        container.innerHTML = `<div style="color:var(--danger-color);font-size:13px;text-align:center;padding:16px 0;">加载失败：${err.message}</div>`
+      }
+    }
+
+    // 保存专业版计划
+    document.getElementById('saveProfessionalBtn').addEventListener('click', async () => {
+      const content = document.getElementById('professionalContent').value.trim()
+      const errorEl = document.getElementById('professionalError')
+
+      if (!content) {
+        errorEl.textContent = '请输入专业康复计划'
+        errorEl.classList.add('show')
+        return
+      }
+
+      errorEl.classList.remove('show')
+      const btn = document.getElementById('saveProfessionalBtn')
+      btn.disabled = true
+      btn.textContent = '保存中...'
+
+      try {
+        if (currentPlanId) {
+          // 更新
+          const { error } = await supabase
+            .from('rehab_plans')
+            .update({ professional_content: content, updated_at: new Date().toISOString() })
+            .eq('id', currentPlanId)
+          if (error) throw error
+        } else {
+          // 新增
+          const { data: { session } } = await supabase.auth.getSession()
+          const { error } = await supabase
+            .from('rehab_plans')
+            .insert({
+              patient_id: patientId,
+              doctor_id: session.user.id,
+              professional_content: content
+            })
+          if (error) throw error
+        }
+
+        btn.textContent = '已保存 ✓'
+        setTimeout(() => {
+          btn.textContent = '保存计划'
+          btn.disabled = false
+        }, 2000)
+      } catch (err) {
+        errorEl.textContent = '保存失败：' + err.message
+        errorEl.classList.add('show')
+        btn.textContent = '保存计划'
+        btn.disabled = false
+      }
+    })
+
+    // AI 生成家长版
+    document.getElementById('generateFamilyBtn').addEventListener('click', async () => {
+      const professional = document.getElementById('professionalContent').value.trim()
+      const errorEl = document.getElementById('familyError')
+      const successEl = document.getElementById('familySuccess')
+
+      if (!professional) {
+        errorEl.textContent = '请先填写专业版计划'
+        errorEl.classList.add('show')
+        return
+      }
+
+      errorEl.classList.remove('show')
+      successEl.classList.remove('show')
+
+      const btn = document.getElementById('generateFamilyBtn')
+      btn.disabled = true
+      btn.textContent = '生成中...'
+
+      const display = document.getElementById('familyDisplay')
+      display.textContent = 'AI 正在生成家长版，请稍候...'
+      display.classList.remove('empty')
+
+      try {
+        const result = await callGLM([
+          { role: 'system', content: '你是一名康复科医生助手，请将专业的康复训练计划改写成家长能看懂的通俗版本，语言温和、简洁、鼓励性强，避免专业术语，每个训练项目说明要点和注意事项。' },
+          { role: 'user', content: `请将以下专业康复计划改写为家长版：\n${professional}` }
+        ])
+
+        generatedFamilyContent = result
+        display.textContent = result
+        document.getElementById('confirmFamilyBtn').style.display = 'block'
+        btn.textContent = '✨ 重新生成'
+        btn.disabled = false
+      } catch (err) {
+        errorEl.textContent = '生成失败：' + err.message
+        errorEl.classList.add('show')
+        display.textContent = '生成失败，请重试'
+        btn.textContent = '✨ AI 一键生成家长版'
+        btn.disabled = false
+      }
+    })
+
+    // 确认并保存家长版
+    document.getElementById('confirmFamilyBtn').addEventListener('click', async () => {
+      if (!generatedFamilyContent) return
+
+      const confirmed = confirm('⚠️ 请确认医疗内容无误后保存\n\nAI 生成的内容需要您审核确认，确认后将展示给家长。')
+      if (!confirmed) return
+
+      const btn = document.getElementById('confirmFamilyBtn')
+      btn.disabled = true
+      btn.textContent = '保存中...'
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (currentPlanId) {
+          const { error } = await supabase
+            .from('rehab_plans')
+            .update({ 
+              family_content: generatedFamilyContent, 
+              is_approved: true,
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', currentPlanId)
+          if (error) throw error
+        } else {
+          const { error } = await supabase
+            .from('rehab_plans')
+            .insert({
+              patient_id: patientId,
+              doctor_id: session.user.id,
+              professional_content: document.getElementById('professionalContent').value,
+              family_content: generatedFamilyContent,
+              is_approved: true
+            })
+          if (error) throw error
+        }
+
+        document.getElementById('familySuccess').textContent = '已保存并发布给家长 ✓'
+        document.getElementById('familySuccess').classList.add('show')
+        btn.textContent = '✅ 已确认保存'
+      } catch (err) {
+        document.getElementById('familyError').textContent = '保存失败：' + err.message
+        document.getElementById('familyError').classList.add('show')
+        btn.textContent = '✅ 确认并保存'
+        btn.disabled = false
+      }
+    })
+
+    // 加载并渲染任务列表
+    async function loadTasks() {
+      const { data: tasks } = await supabase
+        .from('daily_tasks')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('sort_order', { ascending: true })
+      renderTaskList(tasks || [])
+    }
+
+    function renderTaskList(tasks) {
+      const container = document.getElementById('taskList')
+      if (tasks.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-secondary);font-size:13px;text-align:center;padding:16px 0;">还没有任务，请手动添加或 AI 拆解</div>'
+        return
+      }
+      container.innerHTML = tasks.map(t => `
+        <div class="task-item" data-id="${t.id}">
+          <div class="task-item-info">
+            <div class="task-item-name">${t.task_name}</div>
+            ${t.description ? `<div class="task-item-desc">${t.description}</div>` : ''}
+            ${t.frequency ? `<div class="task-item-freq">📅 ${t.frequency}</div>` : ''}
+          </div>
+          <button class="task-delete-btn" onclick="deleteTask('${t.id}')">×</button>
+        </div>
+      `).join('')
+    }
+
+    // 手动添加任务
+    document.getElementById('addTaskBtn').addEventListener('click', async () => {
+      const name = document.getElementById('taskName').value.trim()
+      const desc = document.getElementById('taskDesc').value.trim()
+      const freq = document.getElementById('taskFreq').value.trim()
+      const errorEl = document.getElementById('taskError')
+
+      if (!name) {
+        errorEl.textContent = '请输入任务名称'
+        errorEl.classList.add('show')
+        return
+      }
+      errorEl.classList.remove('show')
+
+      const { data: tasks } = await supabase
+        .from('daily_tasks').select('sort_order').eq('patient_id', patientId)
+        .order('sort_order', { ascending: false }).limit(1)
+      const nextOrder = tasks?.[0]?.sort_order + 1 || 0
+
+      const { error } = await supabase.from('daily_tasks').insert({
+        patient_id: patientId,
+        plan_id: currentPlanId,
+        task_name: name,
+        description: desc,
+        frequency: freq,
+        sort_order: nextOrder
+      })
+
+      if (error) {
+        errorEl.textContent = '添加失败：' + error.message
+        errorEl.classList.add('show')
+        return
+      }
+
+      // 清空输入框
+      document.getElementById('taskName').value = ''
+      document.getElementById('taskDesc').value = ''
+      document.getElementById('taskFreq').value = ''
+      loadTasks()
+    })
+
+    // AI 拆解任务
+    document.getElementById('aiSplitBtn').addEventListener('click', async () => {
+      const professional = document.getElementById('professionalContent').value.trim()
+      const errorEl = document.getElementById('taskError')
+      const successEl = document.getElementById('taskSuccess')
+
+      if (!professional) {
+        errorEl.textContent = '请先填写并保存专业版计划'
+        errorEl.classList.add('show')
+        return
+      }
+
+      errorEl.classList.remove('show')
+      successEl.classList.remove('show')
+
+      const btn = document.getElementById('aiSplitBtn')
+      btn.disabled = true
+      btn.textContent = '拆解中...'
+
+      try {
+        const result = await callGLM([
+          { 
+            role: 'system', 
+            content: '你是康复医学科AI助手。请将康复计划拆解为每日训练任务列表，严格按JSON格式返回，不要输出任何其他内容。格式：[{"task_name":"任务名","description":"具体描述","frequency":"频次"}]' 
+          },
+          { role: 'user', content: `请将以下康复计划拆解为每日任务列表：\n${professional}` }
+        ])
+
+        // 解析JSON
+        const jsonStr = result.replace(/```json|```/g, '').trim()
+        const tasks = JSON.parse(jsonStr)
+
+        if (!Array.isArray(tasks) || tasks.length === 0) throw new Error('AI 返回格式异常')
+
+        // 确认后批量插入
+        const confirmed = confirm(`AI 拆解出 ${tasks.length} 个任务，确认后将覆盖现有任务列表：\n\n${tasks.map(t => `• ${t.task_name}：${t.frequency}`).join('\n')}\n\n确认保存？`)
+        if (!confirmed) {
+          btn.textContent = '🤖 AI 拆解任务'
+          btn.disabled = false
+          return
+        }
+
+        // 删除旧任务
+        await supabase.from('daily_tasks').delete().eq('patient_id', patientId)
+
+        // 插入新任务
+        const inserts = tasks.map((t, i) => ({
+          patient_id: patientId,
+          plan_id: currentPlanId,
+          task_name: t.task_name,
+          description: t.description,
+          frequency: t.frequency,
+          sort_order: i
+        }))
+        const { error } = await supabase.from('daily_tasks').insert(inserts)
+        if (error) throw error
+
+        successEl.textContent = `已成功导入 ${tasks.length} 个训练任务 ✓`
+        successEl.classList.add('show')
+        loadTasks()
+      } catch (err) {
+        errorEl.textContent = 'AI拆解失败：' + err.message
+        errorEl.classList.add('show')
+      }
+
+      btn.textContent = '🤖 AI 拆解任务'
+      btn.disabled = false
+    })
+
+    // 删除任务
+    window.deleteTask = async (taskId) => {
+      if (!confirm('确认删除此任务？')) return
+      await supabase.from('daily_tasks').delete().eq('id', taskId)
+      loadTasks()
+    }
+
+    // 初始化
+    init()
+    loadTasks()
+  </script>
 </body>
 </html>

@@ -5,8 +5,466 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>RehabVisit AI · 医生看板</title>
   <link rel="stylesheet" href="../css/main.css">
+  <style>
+    :root {
+      --primary-color: #4A90D9;
+      --primary-light: #EBF4FF;
+      --success-color: #52C41A;
+      --warning-color: #FAAD14;
+      --danger-color: #FF4D4F;
+      --text-primary: #2C3E50;
+      --text-secondary: #7F8C8D;
+      --bg-page: #F5F7FA;
+      --bg-card: #FFFFFF;
+      --border-color: #E8ECF0;
+      --border-radius: 12px;
+      --shadow-card: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    body {
+      padding-bottom: 80px;
+    }
+
+    /* 区域一：顶部导航栏 */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .nav-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .nav-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary-color);
+      cursor: pointer;
+    }
+
+    /* 区域二：统计摘要卡片 */
+    .stats-container {
+      display: flex;
+      gap: 12px;
+      padding: 16px 20px;
+    }
+    .stat-card {
+      flex: 1;
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-card);
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary-color);
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    /* 区域三：患者列表 */
+    .section-header {
+      padding: 0 20px;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .patient-list {
+      padding: 0 20px;
+    }
+    .patient-card {
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-card);
+      padding: 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .patient-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+    .patient-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .patient-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .patient-age {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-left: 8px;
+    }
+    .patient-diagnosis {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+    }
+    .patient-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .last-checkin {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .progress-mini {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .progress-mini-bar {
+      width: 60px;
+      height: 6px;
+      background: var(--border-color);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-mini-fill {
+      height: 100%;
+      background: var(--primary-color);
+      border-radius: 3px;
+    }
+    .progress-mini-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    .empty-text {
+      font-size: 14px;
+    }
+
+    /* 区域四：悬浮添加按钮 */
+    .fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(74, 144, 217, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+    .fab:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(74, 144, 217, 0.5);
+    }
+  </style>
 </head>
 <body>
-  <!-- 医生看板 -->
+  <!-- 区域一：顶部导航栏 -->
+  <div class="top-nav">
+    <div class="nav-left">
+      <div class="nav-title">康复随访 AI</div>
+      <div class="nav-subtitle">医生端</div>
+    </div>
+    <div class="avatar" id="avatarBtn" title="退出登录">医</div>
+  </div>
+
+  <!-- 区域二：统计摘要卡片 -->
+  <div class="stats-container">
+    <div class="stat-card">
+      <div class="stat-value" id="totalPatients">0</div>
+      <div class="stat-label">患者总数</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="weekCheckins">-</div>
+      <div class="stat-label">本周已打卡</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="pendingReview">-</div>
+      <div class="stat-label">待查看记录</div>
+    </div>
+  </div>
+
+  <!-- 区域三：患者列表 -->
+  <div class="section-header">
+    <div class="section-title">我的患者</div>
+  </div>
+  <div class="patient-list" id="patientList">
+    <div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-text">加载中...</div>
+    </div>
+  </div>
+
+  <!-- 区域四：悬浮添加按钮 -->
+  <a href="patient-add.html" class="fab">+</a>
+
+  <script type="module">
+    import { supabase } from '../js/supabase-client.js'
+
+    // 获取本周一的日期字符串
+    function getMondayOfCurrentWeek() {
+      const now = new Date()
+      const dayOfWeek = now.getDay() // 0=周日
+      const monday = new Date(now)
+      // 周一 = 当前日期 - (当前星期几 - 1)，周日特殊处理
+      const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+      monday.setDate(now.getDate() - daysToSubtract)
+      monday.setHours(0, 0, 0, 0)
+      return monday
+    }
+
+    // 计算本周天数（周一至今）
+    function getDaysThisWeek() {
+      const now = new Date()
+      const dayOfWeek = now.getDay() // 0=周日
+      return dayOfWeek === 0 ? 7 : dayOfWeek
+    }
+
+    // 获取患者本周完成率数据
+    async function getPatientWeeklyProgress(patientId) {
+      const monday = getMondayOfCurrentWeek()
+      const now = new Date()
+
+      // 查询该患者的任务数量
+      const { data: tasks } = await supabase
+        .from('daily_tasks')
+        .select('id')
+        .eq('patient_id', patientId)
+
+      const taskCount = tasks?.length || 0
+
+      // 如果没有任务，返回未开始状态
+      if (taskCount === 0) {
+        return { percent: null, lastCheckin: null }
+      }
+
+      // 查询本周打卡记录
+      const { data: logs } = await supabase
+        .from('task_logs')
+        .select('completed_at')
+        .eq('patient_id', patientId)
+        .gte('completed_at', monday.toISOString())
+        .lte('completed_at', now.toISOString())
+        .order('completed_at', { ascending: false })
+
+      // 计算完成率
+      const daysThisWeek = getDaysThisWeek()
+      const expectedTotal = taskCount * daysThisWeek
+      const actualTotal = logs?.length || 0
+      const percent = Math.min(Math.round((actualTotal / expectedTotal) * 100), 100)
+
+      // 最近打卡时间
+      let lastCheckin = null
+      if (logs && logs.length > 0) {
+        const lastDate = new Date(logs[0].completed_at)
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        if (lastDate >= today) {
+          lastCheckin = '今天'
+        } else {
+          const yesterday = new Date(today)
+          yesterday.setDate(yesterday.getDate() - 1)
+          if (lastDate >= yesterday) {
+            lastCheckin = '昨天'
+          } else {
+            const diffDays = Math.floor((now - lastDate) / (1000 * 60 * 60 * 24))
+            lastCheckin = `${diffDays}天前`
+          }
+        }
+      }
+
+      return { percent, lastCheckin }
+    }
+
+    // 验证登录状态并初始化
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = '../index.html'
+        return
+      }
+
+      // 拉取患者列表
+      const { data: patients, error } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('doctor_id', session.user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('获取患者列表失败:', error)
+        renderPatients([])
+        return
+      }
+
+      // 先渲染基础列表
+      renderPatients(patients || [])
+      
+      // 串行查询每个患者的完成率
+      const patientsWithProgress = []
+      let totalWeekCheckins = 0
+
+      for (const patient of (patients || [])) {
+        const progress = await getPatientWeeklyProgress(patient.id)
+        patientsWithProgress.push({ ...patient, progress })
+        if (progress.percent !== null) {
+          totalWeekCheckins += Math.round((progress.percent / 100) * (await getPatientTaskCount(patient.id)) * getDaysThisWeek())
+        }
+      }
+
+      // 更新列表显示
+      renderPatientsWithProgress(patientsWithProgress)
+      
+      // 更新统计
+      document.getElementById('totalPatients').textContent = patients.length
+      document.getElementById('weekCheckins').textContent = totalWeekCheckins > 0 ? totalWeekCheckins : '-'
+      document.getElementById('pendingReview').textContent = '-'
+    }
+
+    // 获取患者任务数量（缓存版）
+    async function getPatientTaskCount(patientId) {
+      const { data: tasks } = await supabase
+        .from('daily_tasks')
+        .select('id')
+        .eq('patient_id', patientId)
+      return tasks?.length || 0
+    }
+
+    // 渲染患者列表（基础版，先显示）
+    function renderPatients(patients) {
+      const container = document.getElementById('patientList')
+
+      if (patients.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">👥</div>
+            <div class="empty-text">还没有患者，点击右下角添加第一位</div>
+          </div>
+        `
+        return
+      }
+
+      container.innerHTML = patients.map(patient => {
+        const age = patient.age ? `${patient.age}岁` : ''
+        const diagnosis = patient.diagnosis || '未填写诊断'
+        
+        return `
+          <div class="patient-card" onclick="window.location.href='patient-detail.html?id=${patient.id}'">
+            <div class="patient-header">
+              <div>
+                <span class="patient-name">${patient.name}</span>
+                <span class="patient-age">${age}</span>
+              </div>
+            </div>
+            <div class="patient-diagnosis">${diagnosis}</div>
+            <div class="patient-footer">
+              <div class="last-checkin">加载中...</div>
+              <div class="progress-mini">
+                <div class="progress-mini-bar">
+                  <div class="progress-mini-fill" style="width: 0%"></div>
+                </div>
+                <span class="progress-mini-text">计算中...</span>
+              </div>
+            </div>
+          </div>
+        `
+      }).join('')
+    }
+
+    // 渲染患者列表（带完成率）
+    function renderPatientsWithProgress(patients) {
+      const container = document.getElementById('patientList')
+
+      container.innerHTML = patients.map(patient => {
+        const age = patient.age ? `${patient.age}岁` : ''
+        const diagnosis = patient.diagnosis || '未填写诊断'
+        const { percent, lastCheckin } = patient.progress || {}
+        
+        // 完成率显示
+        const progressText = percent === null ? '暂未开始' : `本周 ${percent}%`
+        const progressWidth = percent || 0
+        
+        // 最近打卡显示
+        const lastCheckinText = lastCheckin || '暂无打卡'
+        
+        return `
+          <div class="patient-card" onclick="window.location.href='patient-detail.html?id=${patient.id}'">
+            <div class="patient-header">
+              <div>
+                <span class="patient-name">${patient.name}</span>
+                <span class="patient-age">${age}</span>
+              </div>
+            </div>
+            <div class="patient-diagnosis">${diagnosis}</div>
+            <div class="patient-footer">
+              <div class="last-checkin">最近打卡：${lastCheckinText}</div>
+              <div class="progress-mini">
+                <div class="progress-mini-bar">
+                  <div class="progress-mini-fill" style="width: ${progressWidth}%"></div>
+                </div>
+                <span class="progress-mini-text">${progressText}</span>
+              </div>
+            </div>
+          </div>
+        `
+      }).join('')
+    }
+
+    // 退出登录
+    async function logout() {
+      const confirmed = confirm('确认退出登录？')
+      if (!confirmed) return
+      await supabase.auth.signOut()
+      window.location.href = '../index.html'
+    }
+
+    // 绑定事件
+    document.getElementById('avatarBtn').addEventListener('click', logout)
+
+    // 初始化
+    init()
+  </script>
 </body>
 </html>

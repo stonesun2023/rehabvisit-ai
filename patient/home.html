@@ -5,8 +5,640 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>RehabVisit AI · 今日训练</title>
   <link rel="stylesheet" href="../css/main.css">
+  <style>
+    :root {
+      --primary-color: #4A90D9;
+      --primary-light: #EBF4FF;
+      --success-color: #52C41A;
+      --warning-color: #FAAD14;
+      --danger-color: #FF4D4F;
+      --text-primary: #2C3E50;
+      --text-secondary: #7F8C8D;
+      --bg-page: #F5F7FA;
+      --bg-card: #FFFFFF;
+      --border-color: #E8ECF0;
+      --border-radius: 12px;
+      --shadow-card: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    body {
+      padding-bottom: 70px;
+    }
+
+    /* 区域一：顶部导航栏 */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .nav-left {
+      display: flex;
+      flex-direction: column;
+    }
+    .patient-name {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .today-date {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+
+    /* 区域二：今日进度卡片 */
+    .progress-card {
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-card);
+      margin: 16px 20px;
+      padding: 20px;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .progress-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .progress-count {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .progress-count span {
+      color: var(--primary-color);
+      font-weight: 600;
+    }
+    .progress-bar {
+      height: 8px;
+      background: var(--border-color);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--primary-color);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .encouragement {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    /* 区域三：训练任务列表 */
+    .task-list {
+      padding: 0 20px;
+    }
+    .task-card {
+      background: var(--bg-card);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-card);
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+    }
+    .task-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .task-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      transition: background 0.3s ease;
+    }
+    .task-icon.done {
+      background: var(--primary-light);
+    }
+    .task-icon.todo {
+      background: var(--bg-page);
+    }
+    .task-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .task-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .task-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    .task-duration {
+      display: inline-block;
+      font-size: 12px;
+      padding: 2px 8px;
+      background: var(--primary-light);
+      color: var(--primary-color);
+      border-radius: 10px;
+    }
+    .task-action {
+      flex-shrink: 0;
+    }
+    .complete-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid var(--border-color);
+      background: var(--bg-card);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: all 0.3s ease;
+    }
+    .complete-btn:hover {
+      border-color: var(--success-color);
+    }
+    .complete-btn.done {
+      border-color: var(--success-color);
+      background: var(--success-color);
+      cursor: default;
+    }
+    .complete-btn.animating {
+      animation: pop 0.3s ease;
+    }
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.95); }
+      100% { transform: scale(1); }
+    }
+
+    /* 打卡面板 */
+    .checkin-panel {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      display: none;
+    }
+    .checkin-panel.show {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .difficulty-label {
+      font-size: 14px;
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+    .difficulty-options {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .difficulty-option {
+      flex: 1;
+      padding: 10px 8px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-card);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+      font-size: 13px;
+    }
+    .difficulty-option:hover {
+      border-color: var(--primary-color);
+    }
+    .difficulty-option.selected {
+      border-color: var(--primary-color);
+      background: var(--primary-light);
+    }
+    .difficulty-option .emoji {
+      font-size: 20px;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .note-input {
+      width: 100%;
+      height: 40px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0 12px;
+      font-size: 14px;
+      color: var(--text-primary);
+      background: var(--bg-page);
+      margin-bottom: 12px;
+    }
+    .note-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    .note-input::placeholder {
+      color: var(--text-secondary);
+    }
+    .confirm-btn {
+      width: 100%;
+      height: 44px;
+      background: var(--primary-color);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .confirm-btn:active {
+      transform: scale(0.98);
+    }
+    .confirm-btn:disabled {
+      background: var(--border-color);
+      cursor: not-allowed;
+    }
+    .error-hint {
+      color: var(--danger-color);
+      font-size: 12px;
+      margin-bottom: 8px;
+      display: none;
+    }
+    .error-hint.show {
+      display: block;
+    }
+
+    /* 已完成状态显示 */
+    .completed-info {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: var(--primary-light);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-primary);
+      display: none;
+    }
+    .completed-info.show {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .completed-info .difficulty-display {
+      font-weight: 500;
+    }
+
+    /* 区域四：底部导航栏 */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 20px;
+    }
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      text-decoration: none;
+      font-size: 12px;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+    .nav-tab.active {
+      color: var(--primary-color);
+    }
+    .nav-tab-icon {
+      font-size: 20px;
+    }
+  </style>
 </head>
 <body>
   <!-- 今日训练 -->
+  <!-- 区域一：顶部导航栏 -->
+  <div class="top-nav">
+    <div class="nav-left">
+      <div class="patient-name">小明</div>
+      <div class="today-date" id="todayDate"></div>
+    </div>
+    <div class="avatar" id="avatarBtn" style="cursor:pointer;" title="切换账号">小</div>
+  </div>
+
+  <!-- 区域二：今日进度卡片 -->
+  <div class="progress-card">
+    <div class="progress-header">
+      <div class="progress-title">今日训练</div>
+      <div class="progress-count"><span id="doneCount">0</span>/<span id="totalCount">5</span> 已完成</div>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+    <div class="encouragement" id="encouragement">今天的训练还没开始，加油！💪</div>
+  </div>
+
+  <!-- 区域三：训练任务列表 -->
+  <div class="task-list" id="taskList"></div>
+
+  <!-- 区域四：底部导航栏 -->
+  <div class="bottom-nav">
+    <a href="home.html" class="nav-tab active">
+      <span class="nav-tab-icon">🏠</span>
+      <span>训练</span>
+    </a>
+    <a href="chat.html" class="nav-tab">
+      <span class="nav-tab-icon">💬</span>
+      <span>问问AI</span>
+    </a>
+    <a href="progress.html" class="nav-tab">
+      <span class="nav-tab-icon">📈</span>
+      <span>进展</span>
+    </a>
+  </div>
+
+  <!-- 引入工具函数 -->
+  <script src="../js/utils.js"></script>
+  <script>
+    // 任务数据源（由 loadTasks() 从 Supabase 加载）
+    window.TASKS = [];
+
+    // 生成今日日期
+    function formatDate() {
+      const now = new Date();
+      const month = now.getMonth() + 1;
+      const date = now.getDate();
+      const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      const day = days[now.getDay()];
+      return `${month}月${date}日 · ${day}`;
+    }
+
+    // 获取鼓励语
+    function getEncouragement(percent) {
+      if (percent === 0) return '今天的训练还没开始，加油！💪';
+      if (percent < 50) return '已经开始啦，继续保持！🌟';
+      if (percent < 100) return '快完成了，坚持就是胜利！🎉';
+      return '太棒了！今天的训练全部完成！🏆';
+    }
+
+    // 更新进度显示
+    function updateProgress() {
+      let doneCount = 0;
+      window.TASKS.forEach(task => {
+        if (isTaskCompletedToday(task.id)) {
+          doneCount++;
+        }
+      });
+      const totalCount = window.TASKS.length;
+      const percent = Math.round((doneCount / totalCount) * 100);
+
+      document.getElementById('doneCount').textContent = doneCount;
+      document.getElementById('totalCount').textContent = totalCount;
+      document.getElementById('progressFill').style.width = percent + '%';
+      document.getElementById('encouragement').textContent = getEncouragement(percent);
+    }
+
+    // 渲染任务列表
+    function renderTasks() {
+      const taskList = document.getElementById('taskList');
+      taskList.innerHTML = window.TASKS.map(task => {
+        const isCompleted = isTaskCompletedToday(task.id);
+        const log = getTaskLogToday(task.id);
+        
+        return `
+          <div class="task-card" data-id="${task.id}">
+            <div class="task-header">
+              <div class="task-icon ${isCompleted ? 'done' : 'todo'}">${task.icon}</div>
+              <div class="task-content">
+                <div class="task-name">${task.name}</div>
+                <div class="task-desc">${task.desc}</div>
+                <span class="task-duration">${task.duration}</span>
+              </div>
+              <div class="task-action">
+                <button class="complete-btn ${isCompleted ? 'done' : ''}" data-id="${task.id}">
+                  ${isCompleted ? '✅' : ''}
+                </button>
+              </div>
+            </div>
+            ${isCompleted && log ? `
+              <div class="completed-info show">
+                <span>已完成</span>
+                <span class="difficulty-display">${getDifficultyEmoji(log.difficulty)} ${getDifficultyText(log.difficulty)}</span>
+                ${log.note ? `<span>· ${log.note}</span>` : ''}
+              </div>
+            ` : `
+              <div class="checkin-panel" id="panel-${task.id}">
+                <div class="difficulty-label">今天完成得怎么样？</div>
+                <div class="difficulty-options">
+                  <div class="difficulty-option" data-difficulty="1" onclick="selectDifficulty('${task.id}', 1)">
+                    <span class="emoji">😊</span>
+                    <span>轻松</span>
+                  </div>
+                  <div class="difficulty-option" data-difficulty="2" onclick="selectDifficulty('${task.id}', 2)">
+                    <span class="emoji">😐</span>
+                    <span>正常</span>
+                  </div>
+                  <div class="difficulty-option" data-difficulty="3" onclick="selectDifficulty('${task.id}', 3)">
+                    <span class="emoji">😓</span>
+                    <span>有点吃力</span>
+                  </div>
+                </div>
+                <input type="text" class="note-input" id="note-${task.id}" placeholder="今天表现怎么样？（选填）">
+                <div class="error-hint" id="error-${task.id}">请选择困难度</div>
+                <button class="confirm-btn" onclick="confirmCheckin('${task.id}')">确认打卡</button>
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+
+      // 绑定点击事件（未完成的任务）
+      document.querySelectorAll('.complete-btn:not(.done)').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const taskId = this.dataset.id;
+          togglePanel(taskId);
+        });
+      });
+    }
+
+    // 当前选中的困难度
+    const selectedDifficulty = {};
+
+    // 选择困难度
+    function selectDifficulty(taskId, difficulty) {
+      selectedDifficulty[taskId] = difficulty;
+      const panel = document.getElementById(`panel-${taskId}`);
+      panel.querySelectorAll('.difficulty-option').forEach(opt => {
+        opt.classList.remove('selected');
+        if (parseInt(opt.dataset.difficulty) === difficulty) {
+          opt.classList.add('selected');
+        }
+      });
+      // 隐藏错误提示
+      document.getElementById(`error-${taskId}`).classList.remove('show');
+    }
+
+    // 切换面板显示
+    function togglePanel(taskId) {
+      const panel = document.getElementById(`panel-${taskId}`);
+      if (panel) {
+        panel.classList.toggle('show');
+      }
+    }
+
+    // 确认打卡
+    function confirmCheckin(taskId) {
+      const difficulty = selectedDifficulty[taskId];
+      const noteInput = document.getElementById(`note-${taskId}`);
+      const errorHint = document.getElementById(`error-${taskId}`);
+      
+      // 验证困难度
+      if (!difficulty) {
+        errorHint.classList.add('show');
+        return;
+      }
+
+      const task = window.TASKS.find(t => t.id === taskId);
+      const note = noteInput.value.trim();
+
+      // 提交打卡记录
+      submitLog(taskId, task.name, difficulty, note).then(() => {
+        renderTasks();
+        updateProgress();
+      });
+    }
+
+    // 初始化日期
+    document.getElementById('todayDate').textContent = formatDate();
+  </script>
+
+  <script type="module">
+    import { supabase } from '../js/supabase-client.js'
+    import { ensurePatientSession } from '../js/auth.js'
+
+    // 缓存今日打卡记录，避免重复请求
+    let todayLogs = []
+
+    // 加载今日打卡记录
+    async function loadTodayLogs(patientId) {
+      const today = new Date().toISOString().split('T')[0]
+      const { data } = await supabase
+        .from('task_logs')
+        .select('*')
+        .eq('patient_id', patientId)
+        .gte('completed_at', today + 'T00:00:00')
+        .lte('completed_at', today + 'T23:59:59')
+      todayLogs = data || []
+    }
+
+    // 检查任务今天是否已完成
+    window.isTaskCompletedToday = (taskId) => 
+      todayLogs.some(log => log.task_id === taskId)
+
+    // 获取任务今天的打卡记录
+    window.getTaskLogToday = (taskId) => 
+      todayLogs.find(log => log.task_id === taskId)
+
+    // 提交打卡记录到 Supabase
+    window.submitLog = async function(taskId, taskName, difficulty, note) {
+      const patientStr = sessionStorage.getItem('rehab_current_patient')
+      const patient = JSON.parse(patientStr)
+      const { data: { session } } = await supabase.auth.getSession()
+
+      const { data, error } = await supabase.from('task_logs').insert({
+        task_id: taskId,
+        patient_id: patient.id,
+        difficulty_level: difficulty,
+        note: note || null,
+        completed_at: new Date().toISOString(),
+        created_by: session.user.id
+      }).select()
+
+      // 更新缓存
+      if (data && data[0]) {
+        todayLogs.push(data[0])
+      }
+    }
+
+    // 从 Supabase 加载任务列表
+    async function loadTasks() {
+      // 使用 ensurePatientSession 获取患者信息（自动恢复 sessionStorage）
+      const patient = await ensurePatientSession()
+      if (!patient) return  // 已跳转，终止后续逻辑
+
+      // 更新顶部姓名显示
+      document.querySelector('.patient-name').textContent = patient.name
+      document.querySelector('.avatar').textContent = patient.name[0]
+
+      // 拉取任务列表
+      const { data: tasks } = await supabase
+        .from('daily_tasks')
+        .select('*')
+        .eq('patient_id', patient.id)
+        .order('sort_order', { ascending: true })
+
+      if (!tasks || tasks.length === 0) {
+        document.getElementById('taskList').innerHTML = 
+          '<div style="text-align:center;padding:40px;color:#7F8C8D;">医生还没有录入训练任务</div>'
+        return
+      }
+
+      // 加载今日打卡记录
+      await loadTodayLogs(patient.id)
+
+      // 把任务数据赋值给原有的 TASKS 变量并渲染
+      window.TASKS = tasks.map(t => ({
+        id: t.id,
+        name: t.task_name,
+        desc: t.description,
+        duration: t.frequency,
+        icon: '🏃'
+      }))
+
+      updateProgress()
+      renderTasks()
+    }
+
+    // 点击头像退出登录
+    document.getElementById('avatarBtn').addEventListener('click', async () => {
+      const confirmed = confirm('确认退出登录？')
+      if (!confirmed) return
+      await supabase.auth.signOut()
+      window.location.href = '../index.html'
+    })
+
+    // 加载任务
+    loadTasks()
+  </script>
 </body>
 </html>

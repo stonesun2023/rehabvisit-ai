@@ -128,6 +128,10 @@
       background: #3A7BC8;
       transform: scale(0.98);
     }
+    .login-btn:disabled {
+      background: var(--border-color);
+      cursor: not-allowed;
+    }
     .login-btn.shake {
       animation: shake 0.6s ease;
     }
@@ -144,11 +148,35 @@
       color: var(--text-secondary);
       margin-top: 16px;
     }
-    .demo-hint {
-      text-align: center;
+    .logout-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      padding: 6px 12px;
       font-size: 12px;
-      color: var(--warning-color);
+      color: var(--text-secondary);
+      background: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      cursor: pointer;
+      display: none;
+    }
+    .logout-btn:hover {
+      color: var(--text-primary);
+      border-color: var(--text-secondary);
+    }
+    .logout-btn.show {
+      display: block;
+    }
+    .error-message {
+      text-align: center;
+      font-size: 13px;
+      color: var(--danger-color);
       margin-top: 12px;
+      display: none;
+    }
+    .error-message.show {
+      display: block;
     }
 
     /* 底部免责声明 */
@@ -177,66 +205,147 @@
   <!-- 区域二：角色选择 Tab -->
   <div class="role-tabs">
     <button class="role-tab" data-role="doctor">我是医生</button>
-    <button class="role-tab active" data-role="patient">我是家长</button>
+    <button class="role-tab active" data-role="patient">我是患者</button>
   </div>
 
   <!-- 区域三：登录表单 -->
   <div class="login-card">
-    <div class="form-title" id="formTitle">家长登录</div>
+    <div class="form-title" id="formTitle">患者登录</div>
     <div class="input-group">
-      <input type="tel" id="phone" inputmode="numeric" placeholder="请输入手机号">
+      <input type="email" id="email" placeholder="请输入邮箱">
     </div>
     <div class="input-group">
       <input type="password" id="password" placeholder="请输入密码">
     </div>
     <button class="login-btn" id="loginBtn">登录</button>
+    <div class="error-message" id="errorMessage"></div>
     <div class="form-hint">还没有账号？联系你的康复医生获取邀请</div>
-    <div class="demo-hint">演示模式 · 任意内容可登录</div>
   </div>
+
+  <!-- 退出登录按钮 -->
+  <button class="logout-btn" id="logoutBtn">切换账号</button>
 
   <!-- 底部免责声明 -->
   <div class="disclaimer">本平台仅供康复辅助参考，不构成医疗诊断</div>
 
-  <script>
-    // Tab 切换逻辑
+  <script type="module">
+    import { supabase } from './js/supabase-client.js'
+
+    // DOM 元素
     const tabs = document.querySelectorAll('.role-tab');
     const formTitle = document.getElementById('formTitle');
     const loginBtn = document.getElementById('loginBtn');
-    const phoneInput = document.getElementById('phone');
+    const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
+    const errorMessage = document.getElementById('errorMessage');
     
     let currentRole = 'patient';
 
+    // Tab 切换逻辑
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         currentRole = tab.dataset.role;
-        formTitle.textContent = currentRole === 'doctor' ? '医生登录' : '家长登录';
+        formTitle.textContent = currentRole === 'doctor' ? '医生登录' : '患者登录';
+        errorMessage.classList.remove('show');
       });
     });
 
-    // 登录按钮逻辑
-    loginBtn.addEventListener('click', () => {
-      const phone = phoneInput.value.trim();
+    // 显示错误信息
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.classList.add('show');
+      loginBtn.classList.add('shake');
+      setTimeout(() => {
+        loginBtn.classList.remove('shake');
+      }, 600);
+    }
+
+    // 登录逻辑
+    async function login() {
+      const email = emailInput.value.trim();
       const password = passwordInput.value.trim();
 
-      // 输入框为空时抖动
-      if (!phone || !password) {
-        loginBtn.classList.add('shake');
-        setTimeout(() => {
-          loginBtn.classList.remove('shake');
-        }, 600);
+      // 输入验证
+      if (!email || !password) {
+        showError('请输入邮箱和密码');
         return;
       }
 
-      // 根据角色跳转
-      if (currentRole === 'doctor') {
-        window.location.href = 'doctor/dashboard.html';
-      } else {
-        window.location.href = 'patient/home.html';
+      // 禁用按钮
+      loginBtn.disabled = true;
+      loginBtn.textContent = '登录中...';
+      errorMessage.classList.remove('show');
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ 
+          email, 
+          password 
+        });
+
+        if (error) {
+          showError(error.message === 'Invalid login credentials' 
+            ? '邮箱或密码错误' 
+            : error.message);
+          loginBtn.disabled = false;
+          loginBtn.textContent = '登录';
+          return;
+        }
+
+        // 登录成功，根据角色跳转
+        const userRole = data.user?.user_metadata?.role || currentRole;
+        
+        if (userRole === 'doctor') {
+          window.location.href = './doctor/dashboard.html';
+        } else {
+          // 查询绑定的患者档案
+          const { data: patient } = await supabase
+            .from('patients')
+            .select('*')
+            .eq('user_id', data.user.id)
+            .single()
+          
+          if (patient) {
+            sessionStorage.setItem('rehab_current_patient', JSON.stringify(patient))
+          }
+          window.location.href = './patient/home.html';
+        }
+
+      } catch (err) {
+        showError('网络错误，请稍后重试');
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登录';
+      }
+    }
+
+    // 绑定事件
+    loginBtn.addEventListener('click', login);
+    
+    passwordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        login();
       }
     });
+
+    // 退出登录
+    async function logout() {
+      await supabase.auth.signOut();
+      window.location.reload();
+    }
+
+    // 检查是否已登录（只显示退出按钮，不自动跳转）
+    async function checkSession() {
+      const { data: { session } } = await supabase.auth.getSession();
+      const logoutBtn = document.getElementById('logoutBtn');
+      
+      if (session) {
+        logoutBtn.classList.add('show');
+        logoutBtn.addEventListener('click', logout);
+      }
+    }
+
+    checkSession();
   </script>
 </body>
 </html>

@@ -5,8 +5,534 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>RehabVisit AI · AI问答</title>
   <link rel="stylesheet" href="../css/main.css">
+  <style>
+    :root {
+      --primary-color: #4A90D9;
+      --primary-light: #EBF4FF;
+      --success-color: #52C41A;
+      --warning-color: #FAAD14;
+      --danger-color: #FF4D4F;
+      --text-primary: #2C3E50;
+      --text-secondary: #7F8C8D;
+      --bg-page: #F5F7FA;
+      --bg-card: #FFFFFF;
+      --border-color: #E8ECF0;
+      --border-radius: 12px;
+      --shadow-card: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    body {
+      padding-bottom: 70px;
+    }
+
+    /* 区域一：顶部导航栏 */
+    .top-nav {
+      display: flex;
+      align-items: center;
+      padding: 12px 20px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: var(--text-primary);
+      text-decoration: none;
+      margin-right: 8px;
+    }
+    .nav-center {
+      flex: 1;
+    }
+    .nav-title {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .nav-subtitle {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    /* 区域二：对话消息区域 */
+    .chat-container {
+      padding: 16px 20px 90px;
+      min-height: calc(100vh - 120px);
+    }
+    .message {
+      display: flex;
+      margin-bottom: 12px;
+      align-items: flex-start;
+    }
+    .message.user {
+      flex-direction: row-reverse;
+    }
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .message.ai .message-avatar {
+      background: var(--primary-light);
+      color: var(--primary-color);
+      margin-right: 8px;
+    }
+    .message.user .message-avatar {
+      background: var(--primary-color);
+      color: #fff;
+      margin-left: 8px;
+    }
+    .message-bubble {
+      max-width: 75%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .message.ai .message-bubble {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border-radius: 4px 16px 16px 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .message.user .message-bubble {
+      background: var(--primary-color);
+      color: #fff;
+      border-radius: 16px 4px 16px 16px;
+    }
+    .thinking-dots {
+      display: flex;
+      gap: 4px;
+      padding: 4px 0;
+    }
+    .thinking-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+    .thinking-dots span:nth-child(3) { animation-delay: 0s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* 区域三：底部输入栏 */
+    .input-bar {
+      position: fixed;
+      bottom: 60px;
+      left: 0;
+      right: 0;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      padding: 12px 20px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+    .message-input {
+      width: 100%;
+      height: 44px;
+      border: 1px solid var(--border-color);
+      border-radius: 22px;
+      padding: 0 16px;
+      font-size: 15px;
+      color: var(--text-primary);
+      background: var(--bg-page);
+      transition: border-color 0.3s ease;
+    }
+    .message-input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+    }
+    .message-input::placeholder {
+      color: var(--text-secondary);
+    }
+    .message-input:disabled {
+      background: var(--border-color);
+    }
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: var(--primary-color);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+    .send-btn:disabled {
+      background: var(--border-color);
+      cursor: not-allowed;
+    }
+    .send-btn:not(:disabled):active {
+      transform: scale(0.95);
+    }
+
+    /* 区域四：底部导航栏 */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 0 20px;
+    }
+    .nav-tab {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      text-decoration: none;
+      font-size: 12px;
+      color: var(--text-secondary);
+      transition: color 0.3s ease;
+    }
+    .nav-tab.active {
+      color: var(--primary-color);
+    }
+    .nav-tab-icon {
+      font-size: 20px;
+    }
+  </style>
 </head>
 <body>
   <!-- AI问答 -->
+  <!-- 区域一：顶部导航栏 -->
+  <div class="top-nav">
+    <a href="home.html" class="back-btn">←</a>
+    <div class="nav-center">
+      <div class="nav-title">问问 AI</div>
+      <div class="nav-subtitle">小明的康复助手</div>
+    </div>
+  </div>
+
+  <!-- 区域二：对话消息区域 -->
+  <div class="chat-container" id="chatContainer"></div>
+
+  <!-- 区域三：底部输入栏 -->
+  <div class="input-bar">
+    <div class="input-wrapper">
+      <input type="text" class="message-input" id="messageInput" placeholder="问问小明的康复情况…">
+    </div>
+    <button class="send-btn" id="sendBtn" disabled>↑</button>
+  </div>
+
+  <!-- 区域四：底部导航栏 -->
+  <div class="bottom-nav">
+    <a href="home.html" class="nav-tab">
+      <span class="nav-tab-icon">🏠</span>
+      <span>训练</span>
+    </a>
+    <a href="chat.html" class="nav-tab active">
+      <span class="nav-tab-icon">💬</span>
+      <span>问问AI</span>
+    </a>
+    <a href="progress.html" class="nav-tab">
+      <span class="nav-tab-icon">📈</span>
+      <span>进展</span>
+    </a>
+  </div>
+
+  <script type="module">
+    import { supabase } from '../js/supabase-client.js'
+    import { ensurePatientSession } from '../js/auth.js'
+
+    // GLM API 配置
+    const GLM_API_KEY = '27b0c3b4495d41a7abd38c5666e09665.7UmdjwqfPcaHfoZO';
+    const GLM_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+
+    // 患者上下文（从 sessionStorage 读取）
+    let patientContext = ''
+    let currentPatientId = null
+
+    // 初始化患者上下文
+    async function initPatientContext() {
+      const patient = await ensurePatientSession()
+      if (!patient) return null
+
+      currentPatientId = patient.id
+
+      // 更新顶部显示
+      document.querySelector('.nav-subtitle').textContent = `${patient.name}的康复助手`
+
+      // 构建患者上下文
+      patientContext = `
+患者信息：
+- 姓名：${patient.name}，${patient.age || '未知'}岁
+- 诊断：${patient.diagnosis || '未知'}
+- 当前康复目标：改善步行功能，提高日常生活自理能力
+
+当前训练计划由医生制定，请根据患者情况回答家长问题。
+`
+      return patient
+    }
+
+    // 对话历史
+    let conversationHistory = [];
+
+    // DOM 元素
+    const chatContainer = document.getElementById('chatContainer');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // 渲染消息
+    function renderMessage(content, isUser = false) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+      
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      avatar.textContent = isUser ? '我' : 'AI';
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+      bubble.textContent = content;
+      
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(bubble);
+      chatContainer.appendChild(messageDiv);
+      
+      scrollToBottom();
+      return bubble;
+    }
+
+    // 渲染思考中状态
+    function renderThinking() {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message ai';
+      messageDiv.id = 'thinkingMessage';
+      
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      avatar.textContent = 'AI';
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+      bubble.innerHTML = '<div class="thinking-dots"><span></span><span></span><span></span></div>';
+      
+      messageDiv.appendChild(avatar);
+      messageDiv.appendChild(bubble);
+      chatContainer.appendChild(messageDiv);
+      
+      scrollToBottom();
+    }
+
+    // 移除思考中状态
+    function removeThinking() {
+      const thinking = document.getElementById('thinkingMessage');
+      if (thinking) thinking.remove();
+    }
+
+    // 滚动到底部
+    function scrollToBottom() {
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 保存对话记录到 Supabase
+    async function saveChatLog(role, content) {
+      if (!currentPatientId) return
+      try {
+        await supabase.from('chat_logs').insert({
+          patient_id: currentPatientId,
+          role: role,
+          content: content,
+          flagged_for_doctor: false
+        })
+      } catch (err) {
+        // 静默处理错误，不阻塞用户对话
+        console.error('保存对话记录失败:', err)
+      }
+    }
+
+    // 从 Supabase 加载历史对话记录
+    async function loadChatHistory() {
+      if (!currentPatientId) return
+      try {
+        const { data: logs, error } = await supabase
+          .from('chat_logs')
+          .select('*')
+          .eq('patient_id', currentPatientId)
+          .order('created_at', { ascending: true })
+          .limit(50)
+        
+        if (error) throw error
+
+        // 恢复对话历史
+        if (logs && logs.length > 0) {
+          logs.forEach(log => {
+            // 渲染消息
+            renderMessage(log.content, log.role === 'user')
+            // 添加到对话历史（用于 API 调用）
+            conversationHistory.push({ role: log.role, content: log.content })
+          })
+        }
+      } catch (err) {
+        console.error('加载对话历史失败:', err)
+      }
+    }
+
+    // 发送消息到 GLM
+    async function sendToGLM(userMessage) {
+      // 构建系统提示
+      const systemPrompt = `你是一个专业的康复医学科AI助手，专门为患者家长提供支持。
+
+【患者信息】
+${patientContext}
+
+【你的行为准则】
+1. 用温和、鼓励的语气，像朋友一样和家长说话
+2. 回答要具体实用，不说废话
+3. 涉及医疗判断的问题，告诉家长"这个需要复诊时问医生，我帮你记下来"
+4. 如果家长描述紧急症状（高烧超过38.5度持续24小时、突然无法完成之前能做的动作、伤口红肿），立即建议就医
+5. 每次回复控制在200字以内，除非问题需要详细解释
+6. 不做医疗诊断，不建议更改医生制定的方案
+
+【回复语言】：中文`;
+
+      // 构建消息列表（GLM 原生支持 system role）
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        // 加入对话历史（最近6条）
+        ...conversationHistory.slice(-6),
+        // 当前用户消息
+        { role: 'user', content: userMessage }
+      ];
+
+      const response = await fetch(GLM_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GLM_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'glm-4-flash',
+          messages,
+          temperature: 0.7,
+          max_tokens: 500
+        })
+      });
+
+      if (!response.ok) throw new Error(`API错误: ${response.status}`);
+      const data = await response.json();
+      return data.choices[0].message.content;
+    }
+
+    // 发送消息
+    async function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      // 禁用输入
+      messageInput.disabled = true;
+      sendBtn.disabled = true;
+      messageInput.value = '';
+
+      // 渲染用户消息
+      renderMessage(message, true);
+      
+      // 添加到对话历史
+      conversationHistory.push({ role: 'user', content: message });
+
+      // 保存用户消息到 Supabase
+      saveChatLog('user', message)
+
+      // 显示思考中
+      renderThinking();
+
+      try {
+        // 调用 API
+        const response = await sendToGLM(message);
+        
+        // 移除思考中
+        removeThinking();
+        
+        // 渲染 AI 回复
+        renderMessage(response, false);
+        
+        // 添加到对话历史
+        conversationHistory.push({ role: 'assistant', content: response });
+
+        // 保存 AI 回复到 Supabase
+        saveChatLog('assistant', response)
+      } catch (error) {
+        removeThinking();
+        renderMessage('抱歉，网络出了点问题，请稍后再试。', false);
+        console.error('API Error:', error);
+      }
+
+      // 启用输入
+      messageInput.disabled = false;
+      sendBtn.disabled = !messageInput.value.trim();
+      messageInput.focus();
+    }
+
+    // 事件绑定
+    messageInput.addEventListener('input', () => {
+      sendBtn.disabled = !messageInput.value.trim();
+    });
+
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && !sendBtn.disabled) {
+        sendMessage();
+      }
+    });
+
+    sendBtn.addEventListener('click', sendMessage);
+
+    // 初始化
+    async function init() {
+      const patient = await initPatientContext()
+      if (!patient) return  // 已跳转，终止后续逻辑
+      
+      // 加载历史对话记录
+      await loadChatHistory()
+      
+      // 如果没有历史记录，显示欢迎消息
+      if (conversationHistory.length === 0) {
+        const welcomeMessage = `你好！我是${patient.name}的康复助手 🌟
+我了解${patient.name}目前的康复计划，你可以问我：
+
+• 今天的训练动作怎么做？
+• 孩子不配合怎么办？
+• 训练中出现什么情况需要注意？
+
+有什么想问的？`
+        
+        renderMessage(welcomeMessage, false)
+      }
+    }
+    
+    init()
+  </script>
 </body>
 </html>
